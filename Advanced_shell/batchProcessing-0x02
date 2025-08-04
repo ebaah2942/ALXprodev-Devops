@@ -9,18 +9,30 @@ API_URL="https://pokeapi.co/api/v2/pokemon"
 # Loop through each Pokémon
 for name in "${pokemon_list[@]}"; do
     echo "Fetching data for $name..."
-    
-    # Fetch and save to file
-    curl -s -o "${name}.json" "${API_URL}/${name}"
-    
-    # Check if request succeeded
-    if [ $? -eq 0 ]; then
-        echo "Saved to ${name}.json"
-    else
-        echo "Error fetching data for $name" >> errors.txt
+
+    success=false
+
+    # Try up to 3 times
+    for attempt in {1..3}; do
+        echo "  Attempt $attempt..."
+        curl -s -f -o "${name}.json" "${API_URL}/${name}"
+
+        if [ $? -eq 0 ]; then
+            echo "  Success! Saved to ${name}.json"
+            success=true
+            break
+        else
+            echo "  Failed to fetch $name (Attempt $attempt)"
+            sleep 2  # short delay before retry
+        fi
+    done
+
+    # After 3 failed attempts
+    if [ "$success" = false ]; then
+        echo "Error: Failed to fetch data for $name after 3 attempts" >> errors.txt
+        echo "  Skipped $name"
     fi
 
-    # Wait 2 seconds to avoid rate limiting
+    # Delay before next Pokémon to avoid rate limiting
     sleep 2
 done
-
